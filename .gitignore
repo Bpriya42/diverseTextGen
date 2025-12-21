@@ -1,0 +1,96 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data files (large files)
+*.pkl
+*.bin
+*.index
+*.npy
+*.npz
+*.pt
+*.pth
+
+# Logs
+*.log
+logs/
+*.out
+*.err
+
+# Output files
+output/
+output2/
+results/
+artifacts/runs/
+artifacts/outputs/
+artifacts/logs/
+.checkpoints.sqlite
+
+# Cache directories
+cache/
+.cache/
+*_cache/
+
+# HuggingFace cache
+models/
+.huggingface/
+
+# macOS
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Large model files
+*.safetensors
+*.ckpt
+
+# Server logs (keep the directory but not the contents)
+server_logs/*.txt
+server_logs/*.log
+server_logs/*.out
+server_logs/*.err
+!server_logs/.gitkeep
+
