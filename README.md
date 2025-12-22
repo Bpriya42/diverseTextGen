@@ -242,17 +242,16 @@ See `env.example` for all available environment variables. Key options:
 
 ```
 Query → Planner → Retriever → Synthesizer → Fact Extractor
-                                    ↓
-                            ┌───────┴───────┐
-                            ↓               ↓
-                        Verifier    Coverage Evaluator
-                            └───────┬───────┘
-                                    ↓
-                            Iteration Gate
-                                    ↓
-                    Check Quality & Memory Constraints
-                                    ↓
-                         [Continue or Terminate]
+                                        ┌───────┴───────┐
+                                        ↓               ↓
+                                    Verifier    Coverage Evaluator
+                                        └───────┬───────┘
+                                                ↓
+                                        Iteration Gate
+                                                ↓
+                                Check Quality & Memory Constraints
+                                                ↓
+                                    [Continue or Terminate]
 ```
 
 **Iteration Control:**
