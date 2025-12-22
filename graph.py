@@ -31,9 +31,8 @@ def should_continue_routing(state: RAGState) -> str:
     """
     should_cont = state.get("should_continue", False)
     iteration = state.get("iteration", 0)
-    max_iter = state.get("max_iterations", 3)
     
-    print(f"[Router] should_continue={should_cont}, iteration={iteration}, max={max_iter}")
+    print(f"[Router] should_continue={should_cont}, iteration={iteration}")
     
     return "continue" if should_cont else "end"
 

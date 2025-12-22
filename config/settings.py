@@ -111,11 +111,8 @@ VERIFIER_MAX_TOKENS = int(os.environ.get("RAG_VERIFIER_MAX_TOKENS", "256"))
 # LANGGRAPH CONFIGURATION
 # ============================================================================
 
-# Default maximum iterations (None = unlimited, controlled by budget only)
-_max_iter_env = os.environ.get("RAG_DEFAULT_MAX_ITERATIONS", "")
-DEFAULT_MAX_ITERATIONS = int(_max_iter_env) if _max_iter_env else None
-
 # Default memory thresholds for termination (percentage)
+# System terminates when RAM or GPU memory exceeds these limits
 DEFAULT_MAX_RAM_PERCENT = float(os.environ.get("RAG_MAX_RAM_PERCENT", "90"))
 DEFAULT_MAX_GPU_PERCENT = float(os.environ.get("RAG_MAX_GPU_PERCENT", "90"))
 

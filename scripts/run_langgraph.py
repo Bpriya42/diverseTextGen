@@ -3,6 +3,7 @@
 Main runner for LangGraph multi-agent RAG system.
 
 This script orchestrates the iterative RAG pipeline with parallel execution.
+Termination is controlled by quality metrics and memory constraints only.
 """
 
 import argparse
@@ -16,15 +17,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from graph import build_graph
 from state import init_state
-from config.settings import OUTPUT_DIR, DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_RAM_PERCENT, DEFAULT_MAX_GPU_PERCENT
+from config.settings import OUTPUT_DIR, DEFAULT_MAX_RAM_PERCENT, DEFAULT_MAX_GPU_PERCENT
 
 
 def run_query(
     query: str,
     query_id: str,
-    max_iterations: int = None,
-    token_budget: int = None,
-    walltime_budget_s: float = None,
     max_ram_percent: float = None,
     max_gpu_percent: float = None,
     output_path: str = None
@@ -35,9 +33,6 @@ def run_query(
     Args:
         query: User query string
         query_id: Unique query identifier
-        max_iterations: Maximum number of iterations (None = unlimited)
-        token_budget: Optional token budget
-        walltime_budget_s: Optional wall-time budget (seconds)
         max_ram_percent: Maximum RAM usage percentage before termination
         max_gpu_percent: Maximum GPU memory usage percentage before termination
         output_path: Where to save results
@@ -55,18 +50,13 @@ def run_query(
     initial_state = init_state(
         query=query,
         query_id=query_id,
-        max_iterations=max_iterations,
-        token_budget=token_budget,
-        walltime_budget_s=walltime_budget_s,
         max_ram_percent=max_ram_percent if max_ram_percent is not None else DEFAULT_MAX_RAM_PERCENT,
         max_gpu_percent=max_gpu_percent if max_gpu_percent is not None else DEFAULT_MAX_GPU_PERCENT
     )
     
     # Configure
-    # Note: recursion_limit must be high enough to accommodate iterations
-    # Each iteration has ~5-6 graph nodes, so limit = max_iterations * 10 (with buffer)
-    # Default to 500 to allow ~50 iterations without hitting the limit
-    recursion_limit = 500 if max_iterations is None else max(100, max_iterations * 10)
+    # High recursion limit for quality-controlled termination
+    recursion_limit = 1000
     config = {
         "configurable": {"thread_id": query_id},
         "recursion_limit": recursion_limit
@@ -78,14 +68,7 @@ def run_query(
     print("="*80)
     print(f"Query ID: {query_id}")
     print(f"Query: {query}")
-    if max_iterations is not None:
-        print(f"Max Iterations: {max_iterations}")
-    else:
-        print(f"Max Iterations: Unlimited (budget-controlled)")
-    if token_budget:
-        print(f"Token Budget: {token_budget:,}")
-    if walltime_budget_s:
-        print(f"Time Budget: {walltime_budget_s}s")
+    print(f"Mode: Quality-controlled (memory-bounded)")
     print(f"Memory Limits: RAM {initial_state['budget']['max_ram_percent']}%, GPU {initial_state['budget']['max_gpu_percent']}%")
     print(f"Graph Recursion Limit: {recursion_limit}")
     print("="*80 + "\n")
@@ -106,10 +89,7 @@ def run_query(
         current_iter = event.get("iteration", 0)
         if current_iter != last_iteration:
             print(f"\n{'-'*80}")
-            if max_iterations is not None:
-                print(f"ITERATION {current_iter + 1} / {max_iterations}")
-            else:
-                print(f"ITERATION {current_iter + 1} (no limit)")
+            print(f"ITERATION {current_iter + 1}")
             print(f"{'-'*80}")
             
             # Append iteration result to JSONL file (one line per iteration)
@@ -151,7 +131,7 @@ def run_query(
         "iteration_history": final_state.get("history", []),
         "total_runtime_seconds": total_time,
         "timestamps": final_state.get("timestamps", {}),
-        "budget_used": final_state.get("budget", {})
+        "memory_config": final_state.get("budget", {})
     }
     
     # Append final completed entry to iteration log (JSONL)
@@ -191,9 +171,6 @@ def run_query(
 def run_batch_from_jsonl(
     jsonl_path: str,
     n: int = None,
-    max_iterations: int = None,
-    token_budget: int = None,
-    walltime_budget_s: float = None,
     max_ram_percent: float = None,
     max_gpu_percent: float = None,
     output_dir: str = None
@@ -204,9 +181,6 @@ def run_batch_from_jsonl(
     Args:
         jsonl_path: Path to JSONL file with queries
         n: Number of queries to process (None = all)
-        max_iterations: Maximum iterations per query (None = unlimited)
-        token_budget: Token budget per query
-        walltime_budget_s: Time budget per query
         max_ram_percent: Maximum RAM usage percentage
         max_gpu_percent: Maximum GPU memory usage percentage
         output_dir: Directory to save results
@@ -248,9 +222,6 @@ def run_batch_from_jsonl(
             result = run_query(
                 query=query_text,
                 query_id=query_id,
-                max_iterations=max_iterations,
-                token_budget=token_budget,
-                walltime_budget_s=walltime_budget_s,
                 max_ram_percent=max_ram_percent,
                 max_gpu_percent=max_gpu_percent,
                 output_path=str(output_path / f"{query_id}.json")
@@ -302,26 +273,6 @@ def main():
     parser.add_argument("--query", type=str, help="User query")
     parser.add_argument("--query_id", type=str, help="Query ID")
     
-    # Iteration control
-    parser.add_argument(
-        "--max_iterations",
-        type=int,
-        default=DEFAULT_MAX_ITERATIONS,
-        help="Maximum iterations (default: unlimited if not set)"
-    )
-    
-    # Budget arguments
-    parser.add_argument(
-        "--token_budget",
-        type=int,
-        help="Token budget (optional)"
-    )
-    parser.add_argument(
-        "--walltime_budget_s",
-        type=float,
-        help="Wall-time budget in seconds (optional)"
-    )
-    
     # Memory limits
     parser.add_argument(
         "--max_ram_percent",
@@ -351,9 +302,6 @@ def main():
         run_batch_from_jsonl(
             jsonl_path=args.input_file,
             n=args.n,
-            max_iterations=args.max_iterations,
-            token_budget=args.token_budget,
-            walltime_budget_s=args.walltime_budget_s,
             max_ram_percent=args.max_ram_percent,
             max_gpu_percent=args.max_gpu_percent,
             output_dir=args.output
@@ -366,9 +314,6 @@ def main():
         run_query(
             query=args.query,
             query_id=args.query_id,
-            max_iterations=args.max_iterations,
-            token_budget=args.token_budget,
-            walltime_budget_s=args.walltime_budget_s,
             max_ram_percent=args.max_ram_percent,
             max_gpu_percent=args.max_gpu_percent,
             output_path=args.output

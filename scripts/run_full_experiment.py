@@ -7,6 +7,8 @@ This script:
 2. Evaluates with ICAT
 3. Tracks scores using ExperimentTracker
 4. Generates visualizations
+
+Termination is controlled by quality metrics and memory constraints only.
 """
 
 import argparse
@@ -29,9 +31,6 @@ def run_full_experiment(
     run_id: Optional[str] = None,
     description: str = "",
     n: Optional[int] = None,
-    max_iterations: Optional[int] = None,
-    token_budget: Optional[int] = None,
-    walltime_budget: Optional[float] = None,
     max_ram_percent: Optional[float] = None,
     max_gpu_percent: Optional[float] = None,
     corpus_path: Optional[str] = None,
@@ -46,9 +45,6 @@ def run_full_experiment(
         run_id: Unique run identifier
         description: Run description
         n: Number of queries (None = all)
-        max_iterations: Max iterations per query (None = unlimited, budget-controlled)
-        token_budget: Optional token budget for termination
-        walltime_budget: Optional walltime budget (seconds) for termination
         max_ram_percent: Maximum RAM usage percentage before termination
         max_gpu_percent: Maximum GPU memory usage percentage before termination
         corpus_path: Corpus file path
@@ -80,12 +76,10 @@ def run_full_experiment(
     run_config = {
         "queries_path": queries_path,
         "n_queries": total_queries,
-        "max_iterations": max_iterations,
-        "token_budget": token_budget,
-        "walltime_budget": walltime_budget,
         "max_ram_percent": max_ram_percent,
         "max_gpu_percent": max_gpu_percent,
-        "corpus_path": corpus_path
+        "corpus_path": corpus_path,
+        "termination_mode": "quality_and_memory"
     }
     
     run_id = tracker.create_run(run_id=run_id, config=run_config, description=description)
@@ -125,9 +119,6 @@ def run_full_experiment(
             rag_result = run_query(
                 query=query_text,
                 query_id=query_id,
-                max_iterations=max_iterations,
-                token_budget=token_budget,
-                walltime_budget_s=walltime_budget,
                 max_ram_percent=max_ram_percent,
                 max_gpu_percent=max_gpu_percent,
                 output_path=str(rag_output_dir / f"{query_id}.json")
@@ -242,24 +233,6 @@ def main():
         help="Number of queries (default: all)"
     )
     parser.add_argument(
-        "--max_iterations",
-        type=int,
-        default=None,
-        help="Max iterations per query (default: unlimited, controlled by budget)"
-    )
-    parser.add_argument(
-        "--token_budget",
-        type=int,
-        default=None,
-        help="Token budget for termination (optional)"
-    )
-    parser.add_argument(
-        "--walltime_budget",
-        type=float,
-        default=None,
-        help="Walltime budget in seconds for termination (optional)"
-    )
-    parser.add_argument(
         "--max_ram_percent",
         type=float,
         default=None,
@@ -297,9 +270,6 @@ def main():
         run_id=args.run_id,
         description=args.description,
         n=args.n,
-        max_iterations=args.max_iterations,
-        token_budget=args.token_budget,
-        walltime_budget=args.walltime_budget,
         max_ram_percent=args.max_ram_percent,
         max_gpu_percent=args.max_gpu_percent,
         corpus_path=args.corpus_path,
@@ -310,4 +280,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -8,11 +8,12 @@
 #SBATCH --partition=cpu
 
 # =============================================================================
-# Experiment: Memory-Controlled (Unlimited Iterations)
+# Experiment: Quality & Memory-Controlled
 # =============================================================================
 #
-# Runs the iterative RAG system with unlimited iterations.
-# Terminates when memory usage exceeds thresholds (RAM 85%, GPU 85%).
+# Runs the iterative RAG system until:
+# 1. Quality criteria are met (primary termination condition)
+# 2. Memory usage exceeds thresholds (RAM 85%, GPU 85%)
 #
 # Usage:
 #   sbatch scripts/run_experiment_memory.sh
@@ -27,7 +28,7 @@ set -e
 # ===========================
 
 N_QUERIES=${1:-all}
-DESCRIPTION="rag_memory_controlled"
+DESCRIPTION="rag_quality_memory_controlled"
 
 # Memory thresholds (terminate when exceeded)
 MAX_RAM_PERCENT=85
@@ -65,16 +66,16 @@ echo "Working directory: $(pwd)"
 
 echo ""
 echo "========================================================================"
-echo "EXPERIMENT: Memory-Controlled (Unlimited Iterations)"
+echo "EXPERIMENT: Quality & Memory-Controlled"
 echo "========================================================================"
 echo "Queries: $N_QUERIES"
 echo "Description: $DESCRIPTION"
-echo "Max Iterations: Unlimited"
+echo "Termination: Quality complete OR Memory exceeded"
 echo "Max RAM: ${MAX_RAM_PERCENT}%"
 echo "Max GPU: ${MAX_GPU_PERCENT}%"
 echo "========================================================================"
 
-# Build command (no --max_iterations = unlimited)
+# Build command
 CMD="python run_full_experiment.py \
     --queries_path $QUERIES_PATH \
     --max_ram_percent $MAX_RAM_PERCENT \
@@ -94,6 +95,5 @@ eval $CMD
 
 echo ""
 echo "========================================================================"
-echo "Experiment Complete! (Memory-Controlled)"
+echo "Experiment Complete! (Quality & Memory-Controlled)"
 echo "========================================================================"
-

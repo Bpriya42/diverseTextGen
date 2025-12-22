@@ -163,8 +163,7 @@ def iteration_gate_node(state: RAGState) -> RAGState:
     Decide whether to continue iterating or terminate.
     
     Termination conditions (priority order):
-    0. Quality complete - all facts verified and coverage is comprehensive
-    1. Max iterations reached (if set)
+    1. Quality complete - all facts verified and coverage is comprehensive
     2. Memory limit exceeded (RAM or GPU)
     
     Args:
@@ -174,7 +173,6 @@ def iteration_gate_node(state: RAGState) -> RAGState:
         Updated RAGState with termination decision
     """
     iteration = state.get("iteration", 0)
-    max_iterations = state.get("max_iterations")  # None means unlimited
     current_history = state.get("history", [])
     budget = state.get("budget", {})
     
@@ -182,13 +180,8 @@ def iteration_gate_node(state: RAGState) -> RAGState:
     print(f"[Iteration Gate] EVALUATION")
     print(f"{'='*60}")
     print(f"  Current iteration: {iteration}")
-    
-    if max_iterations is not None:
-        print(f"  Max iterations: {max_iterations}")
-        print(f"  Completed iteration: {iteration + 1}/{max_iterations}")
-    else:
-        print(f"  Max iterations: Unlimited (quality-controlled)")
-        print(f"  Completed iteration: {iteration + 1}")
+    print(f"  Mode: Quality-controlled (memory-bounded)")
+    print(f"  Completed iteration: {iteration + 1}")
     
     # Create history entry for current iteration
     history_entry = {
@@ -203,7 +196,7 @@ def iteration_gate_node(state: RAGState) -> RAGState:
     
     next_iteration = iteration + 1
     
-    # Check 0: Quality-based termination (primary termination condition)
+    # Check 1: Quality-based termination (primary termination condition)
     # Terminates when: no refuted facts, unclear facts below threshold, missing points below threshold
     if iteration >= 0:
         quality_done, quality_reason = check_quality_termination(state)
@@ -216,16 +209,6 @@ def iteration_gate_node(state: RAGState) -> RAGState:
                 "iteration": next_iteration,
                 "history": new_history
             }
-    
-    # Check 1: Max iterations reached (safety limit, only if max_iterations is set)
-    if max_iterations is not None and next_iteration >= max_iterations:
-        print(f"[Iteration Gate] ✓ Max iterations reached ({next_iteration} >= {max_iterations}) - TERMINATING")
-        return {
-            "should_continue": False,
-            "termination_reason": "max_iterations",
-            "iteration": next_iteration,
-            "history": new_history
-        }
     
     # Check 2: Memory limit exceeded
     max_ram = budget.get("max_ram_percent", 90.0)

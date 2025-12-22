@@ -37,8 +37,7 @@ from config.settings import (
     NLI_BATCH_SIZE,
     LLM_BATCH_SIZE,
     
-    # LangGraph settings
-    DEFAULT_MAX_ITERATIONS,
+    # LangGraph settings (memory constraints only)
     DEFAULT_MAX_RAM_PERCENT,
     DEFAULT_MAX_GPU_PERCENT,
     
@@ -73,7 +72,6 @@ __all__ = [
     "VERIFIER_MAX_TOKENS",
     "NLI_BATCH_SIZE",
     "LLM_BATCH_SIZE",
-    "DEFAULT_MAX_ITERATIONS",
     "DEFAULT_MAX_RAM_PERCENT",
     "DEFAULT_MAX_GPU_PERCENT",
     "get_server_url",
