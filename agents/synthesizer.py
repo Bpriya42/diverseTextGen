@@ -15,6 +15,7 @@ from config.settings import (
     SYNTHESIZER_TEMPERATURE, SYNTHESIZER_MAX_TOKENS
 )
 from llm.server_llm import ServerLLM, load_url_from_log_file
+from prompts.synthesizer_prompts import ANSWER_SYNTHESIS_TEMPLATE
 
 
 # Module-level LLM instance
@@ -91,29 +92,12 @@ def build_prompt(query: str, plan: List[Dict], retrieval: List[Dict]) -> str:
     
     retrieved_text = "\n\n".join(retrieval_texts)
     
-    # Prompt template
-    prompt = f"""You are a helpful assistant that answers complex user questions using evidence retrieved from multiple aspects of the topic.
-
-Each aspect includes a focused subquery, reasoning, and a set of relevant retrieved documents. 
-Read all the information carefully, integrate insights, and write one complete, coherent answer.
-
----
-
-Main Question:
-{query}
-
-Aspects and Reasoning:
-{plan_text}
-
-Retrieved Evidence:
-{retrieved_text}
-
----
-
-Write a final, well-organized answer that addresses the user's question.
-Synthesize information across all aspects.
-Avoid mentioning the retrieval process or document IDs.
-Use clear paragraphs and concise factual explanations."""
+    # Build prompt from template
+    prompt = ANSWER_SYNTHESIS_TEMPLATE.format(
+        query=query,
+        plan_text=plan_text,
+        retrieved_text=retrieved_text
+    )
     
     return prompt.strip()
 

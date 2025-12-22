@@ -15,6 +15,10 @@ This system implements a 6-agent pipeline that iteratively refines responses thr
 
 Agents 5 and 6 run in parallel for improved performance (40-50% faster iterations).
 
+**Termination:** The system automatically terminates when:
+- Quality criteria are met (no refuted facts, minimal unclear facts, comprehensive coverage), OR
+- Memory limits are exceeded (RAM/GPU usage thresholds)
+
 ## Project Structure
 
 ```
@@ -142,7 +146,6 @@ All scripts should be run from the project root directory.
 python scripts/run_langgraph.py \
     --query "What causes headaches and how can they be treated?" \
     --query_id "test_001" \
-    --max_iterations 3 \
     --output ./output/test_result.json
 ```
 
@@ -152,19 +155,17 @@ python scripts/run_langgraph.py \
 python scripts/run_langgraph.py \
     --input_file ./data/queries.jsonl \
     -n 10 \
-    --max_iterations 3 \
     --output ./output/batch_results
 ```
 
-### With Budget Constraints
+### With Custom Memory Limits
 
 ```bash
 python scripts/run_langgraph.py \
     --query "Explain quantum computing" \
     --query_id "quantum_001" \
-    --max_iterations 5 \
-    --token_budget 50000 \
-    --walltime_budget_s 300 \
+    --max_ram_percent 85 \
+    --max_gpu_percent 85 \
     --output ./output/result.json
 ```
 
@@ -210,13 +211,18 @@ Results are saved as JSON with structure:
   "query": "What causes headaches?",
   "final_answer": "...",
   "total_iterations": 3,
-  "termination_reason": "max_iterations",
+  "termination_reason": "quality_complete",
   "iteration_history": [...],
   "total_runtime_seconds": 45.2,
   "timestamps": {...},
-  "budget_used": {...}
+  "memory_config": {...}
 }
 ```
+
+**Termination Reasons:**
+- `quality_complete`: All quality metrics met (primary)
+- `quality_complete_by_agents`: Both verifier and coverage agents indicate completion
+- `memory_exceeded: ...`: RAM or GPU memory limit reached
 
 ## Configuration Options
 
@@ -228,7 +234,8 @@ See `env.example` for all available environment variables. Key options:
 | Cache directory | `RAG_CACHE_DIR` | See config | Embedding cache path |
 | Server log file | `RAG_SERVER_LOG_FILE` | `./server_logs/log.txt` | vLLM server info |
 | Default model | `RAG_DEFAULT_MODEL` | `Qwen/Qwen3-4B-Instruct-2507` | LLM model name |
-| Max iterations | `RAG_DEFAULT_MAX_ITERATIONS` | Unlimited | Default iteration limit |
+| Max RAM % | `RAG_MAX_RAM_PERCENT` | `90` | RAM usage termination threshold |
+| Max GPU % | `RAG_MAX_GPU_PERCENT` | `90` | GPU memory termination threshold |
 | Top-K retrieval | `RAG_DEFAULT_TOP_K` | `5` | Documents per aspect |
 
 ## Architecture
@@ -243,8 +250,15 @@ Query → Planner → Retriever → Synthesizer → Fact Extractor
                                     ↓
                             Iteration Gate
                                     ↓
+                    Check Quality & Memory Constraints
+                                    ↓
                          [Continue or Terminate]
 ```
+
+**Iteration Control:**
+- **Primary:** Quality-based termination (comprehensive, factual answers)
+- **Safety:** Memory-based termination (RAM/GPU thresholds)
+- **No fixed iteration limits** - runs until quality criteria are met or memory is exhausted
 
 ## License
 
