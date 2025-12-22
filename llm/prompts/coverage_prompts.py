@@ -1,10 +1,11 @@
 """
-Agent 6: Coverage Evaluator Prompts
+Prompts for Agent 6: Coverage Evaluator
 
-Prompt for evaluating plan and answer coverage quality.
+Evaluates plan and answer coverage quality.
 """
 
-COVERAGE_EVALUATION_PROMPT = """You are an expert evaluator assessing the topic coverage quality at two levels:
+
+COVERAGE_PROMPT_TEMPLATE = """You are an expert evaluator assessing the topic coverage quality at two levels:
 1. Whether the PLAN adequately covers all salient points of the query
 2. Whether the ANSWER adequately covers all aspects of the plan and query
 

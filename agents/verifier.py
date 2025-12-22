@@ -16,8 +16,8 @@ from config.settings import (
     CORPUS_PATH, CACHE_DIR
 )
 from llm.server_llm import ServerLLM, load_url_from_log_file
+from llm.prompts.verifier_prompts import VERIFICATION_PROMPT, FACTUALITY_SUMMARY_PROMPT
 from retrieval.retriever import Retriever
-from prompts.verifier_prompts import VERIFICATION_PROMPT, FACTUALITY_SUMMARY_PROMPT
 
 
 # Module-level instances

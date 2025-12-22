@@ -1,8 +1,9 @@
 """
-Agent 5: Fact Verifier Prompts
+Prompts for Agent 5: Fact Verifier
 
-Prompts for verifying atomic facts against evidence and generating factuality summaries.
+Verifies atomic facts against retrieved evidence.
 """
+
 
 VERIFICATION_PROMPT = """You are a precise fact-checking system. Your task is to verify whether a given atomic fact is supported by the provided evidence documents.
 

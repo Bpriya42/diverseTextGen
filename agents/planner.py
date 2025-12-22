@@ -15,8 +15,8 @@ from config.settings import (
     PLANNER_TEMPERATURE, PLANNER_MAX_TOKENS
 )
 from llm.server_llm import ServerLLM, load_url_from_log_file
+from llm.prompts.planner_prompts import format_planner_refinement_prompt
 from data.formatters import get_query_planning_formatter
-from prompts.planner_prompts import REFINEMENT_PLAN_TEMPLATE
 
 
 # Module-level LLM instance (singleton pattern)
@@ -165,32 +165,64 @@ def refine_plan_with_feedback(
     plan_quality = coverage_feedback.get("plan_quality", {})
     plan_improvements = plan_quality.get("points_for_improvement", "")
     
-    # Format feedback sections
-    missing_points_text = chr(10).join([f'   - {point}' for point in missing_salient[:5]]) if missing_salient else '   None identified'
-    
-    refuted_text = chr(10).join([
-        f'   - Fact: {detail["fact"][:80]}{"..." if len(detail["fact"]) > 80 else ""}' + chr(10) +
-        f'     Contradiction: {detail["contradiction"]}' + chr(10) +
-        f'     Action: {detail["suggested_correction"]}'
-        for detail in refuted_facts_details[:3]
-    ]) if refuted_facts_details else '   None identified'
-    
-    unclear_text = chr(10).join([
-        f'   - Fact: {detail["fact"][:80]}{"..." if len(detail["fact"]) > 80 else ""}' + chr(10) +
-        f'     Reason Unclear: {detail["reason"]}' + chr(10) +
-        f'     Evidence Needed: {detail["needed_evidence"]}'
-        for detail in unclear_facts_details[:3]
-    ]) if unclear_facts_details else '   None identified'
-    
-    # Build refinement prompt from template
-    prompt = REFINEMENT_PLAN_TEMPLATE.format(
-        query=query,
-        current_plan=json.dumps(current_plan, indent=2),
-        missing_salient_points=missing_points_text,
-        refuted_facts_details=refuted_text,
-        unclear_facts_details=unclear_text,
-        plan_improvements=plan_improvements if plan_improvements else 'None specified'
-    )
+    # Build refinement prompt
+    prompt = f"""You are refining a query decomposition plan based on comprehensive feedback from fact verification and coverage evaluation.
+
+Original Query: {query}
+
+Current Plan:
+{json.dumps(current_plan, indent=2)}
+
+FEEDBACK ANALYSIS:
+
+1. MISSING SALIENT POINTS (High Priority - Add New Aspects):
+{chr(10).join([f'   - {point}' for point in missing_salient[:5]]) if missing_salient else '   None identified'}
+
+2. REFUTED FACTS (Critical - Add Exclusion Instructions):
+{chr(10).join([f'   - Fact: {detail["fact"][:80]}{"..." if len(detail["fact"]) > 80 else ""}' + chr(10) + f'     Contradiction: {detail["contradiction"]}' + chr(10) + f'     Action: {detail["suggested_correction"]}' for detail in refuted_facts_details[:3]]) if refuted_facts_details else '   None identified'}
+
+3. UNCLEAR FACTS (Moderate Priority - Improve Evidence Gathering):
+{chr(10).join([f'   - Fact: {detail["fact"][:80]}{"..." if len(detail["fact"]) > 80 else ""}' + chr(10) + f'     Reason Unclear: {detail["reason"]}' + chr(10) + f'     Evidence Needed: {detail["needed_evidence"]}' for detail in unclear_facts_details[:3]]) if unclear_facts_details else '   None identified'}
+
+4. PLAN QUALITY IMPROVEMENTS:
+{plan_improvements if plan_improvements else 'None specified'}
+
+REFINEMENT INSTRUCTIONS:
+
+A. ADD aspects for missing salient points (highest priority)
+B. MODIFY existing aspects to exclude contradicted information with explicit instructions like:
+   - "Exclude information about [specific contradicted topic]"
+   - "Focus on [alternative reliable sources/perspectives]" 
+C. ENHANCE aspects that led to unclear facts by:
+   - Adding more specific retrieval queries
+   - Targeting authoritative sources
+   - Including evidence requirements
+D. REMOVE redundant or ineffective aspects
+E. Maximum 7 aspects total
+
+CRITICAL JSON FORMATTING REQUIREMENTS:
+- Output ONLY valid JSON array, nothing else
+- Enclose your output in ```json and ``` markers
+- Use double quotes for all strings (not single quotes)
+- Escape special characters in strings (use \\" for quotes, \\n for newlines)
+- Ensure all strings are properly closed
+- No trailing commas after the last item
+- Each object must have exactly these three fields: "aspect", "query", "reason"
+
+Output format:
+```json
+[
+  {{"aspect": "...", "query": "...", "reason": "..."}},
+  {{"aspect": "...", "query": "...", "reason": "..."}}
+]
+```
+
+Example of valid JSON:
+```json
+[
+  {{"aspect": "Medical causes", "query": "What medical conditions cause symptoms?", "reason": "Identifies specific diseases"}},
+  {{"aspect": "Treatment options", "query": "How to treat the condition?", "reason": "Provides actionable solutions"}}
+```"""
     
     response = llm.generate(
         [[{"role": "user", "content": prompt}]],
@@ -201,6 +233,11 @@ def refine_plan_with_feedback(
     
     # Enhanced fallback: augment current plan if parsing fails
     if not refined_plan:
+        # Extract feedback information for fallback
+        written_feedback = factual_feedback.get("written_feedback", {})
+        refuted_facts_details = written_feedback.get("refuted_facts_details", [])
+        unclear_facts_details = written_feedback.get("unclear_facts_details", [])
+        missing_salient = coverage_feedback.get("missing_salient_points", [])
         refined_plan = current_plan.copy()
         
         # Add aspects for missing salient points

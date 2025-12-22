@@ -13,7 +13,7 @@ from config.settings import (
     VERIFIER_TEMPERATURE
 )
 from llm.server_llm import ServerLLM, load_url_from_log_file
-from prompts.fact_extractor_prompts import FACT_EXTRACTION_PROMPT
+from llm.prompts.fact_extractor_prompts import FACT_EXTRACTION_PROMPT
 
 
 # Module-level LLM instance

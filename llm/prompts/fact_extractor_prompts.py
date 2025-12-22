@@ -1,8 +1,9 @@
 """
-Agent 4: Atomic Fact Extractor Prompts
+Prompts for Agent 4: Atomic Fact Extractor
 
-Prompt for extracting atomic facts from generated answers.
+Extracts atomic facts from generated answers.
 """
+
 
 FACT_EXTRACTION_PROMPT = """You are a precise information extraction system.
 

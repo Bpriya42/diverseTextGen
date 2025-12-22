@@ -15,7 +15,7 @@ from config.settings import (
     VERIFIER_TEMPERATURE
 )
 from llm.server_llm import ServerLLM, load_url_from_log_file
-from prompts.coverage_prompts import COVERAGE_EVALUATION_PROMPT
+from llm.prompts.coverage_prompts import COVERAGE_PROMPT_TEMPLATE
 
 
 # Module-level LLM instance
@@ -38,11 +38,6 @@ def get_llm():
         _sampling_params = SamplingParams(temperature=VERIFIER_TEMPERATURE, max_tokens=512)
     
     return _llm_instance, _sampling_params
-
-
-# Note: COVERAGE_PROMPT_TEMPLATE is now imported from prompts module as COVERAGE_EVALUATION_PROMPT
-# Keep legacy variable name for backwards compatibility
-COVERAGE_PROMPT_TEMPLATE = COVERAGE_EVALUATION_PROMPT
 
 
 def parse_json_response(text):
