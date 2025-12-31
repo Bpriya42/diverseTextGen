@@ -259,6 +259,28 @@ Query → Planner → Retriever → Synthesizer → Fact Extractor
 - **Safety:** Memory-based termination (RAM/GPU thresholds)
 - **No fixed iteration limits** - runs until quality criteria are met or memory is exhausted
 
+## Documentation
+
+📚 **Complete documentation is available in the `docs/` directory:**
+
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete technical documentation
+  - 6-agent pipeline architecture
+  - LangGraph workflow details
+  - State management and termination logic
+  - Technical implementation details
+
+- **[USAGE.md](docs/USAGE.md)** - How to run experiments
+  - Quick start guide
+  - Single query and batch processing
+  - Command reference
+  - Output structure and monitoring
+
+- **[OBSERVABILITY.md](docs/OBSERVABILITY.md)** - LLM decision tracking
+  - Real-time decision logging
+  - Quality metrics tracking
+  - Plateau detection
+  - Log analysis examples
+
 ## License
 
 MIT License

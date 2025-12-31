@@ -8,6 +8,7 @@ import time
 from typing import Tuple
 
 from state import RAGState
+from llm_observability import get_observability
 
 # Try to import psutil for memory monitoring
 try:
@@ -195,6 +196,21 @@ def iteration_gate_node(state: RAGState) -> RAGState:
     new_history = current_history + [history_entry]
     
     next_iteration = iteration + 1
+    
+    # Track metrics and check for plateau
+    obs = get_observability()
+    factual_feedback = state.get("factual_feedback", {})
+    coverage_feedback = state.get("coverage_feedback", {})
+    factual_stats = factual_feedback.get("stats", {})
+    
+    # Track iteration metrics for plateau detection
+    obs.track_iteration_metrics(iteration, factual_stats, coverage_feedback)
+    
+    # Check for plateau (informational only, doesn't force termination)
+    is_plateau, plateau_reason = obs.check_plateau()
+    if is_plateau:
+        print(f"[Iteration Gate] ⚠️  {plateau_reason}")
+        print(f"[Iteration Gate] Quality may have stabilized. Continuing to let quality checks decide termination.")
     
     # Check 1: Quality-based termination (primary termination condition)
     # Terminates when: no refuted facts, unclear facts below threshold, missing points below threshold

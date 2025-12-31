@@ -28,7 +28,7 @@ def synthesizer_node(state: RAGState) -> RAGState:
     print(f"[Synthesizer] Generating answer")
     start_time = time.time()
     
-    answer = generate_answer(query, plan, retrieval)
+    answer = generate_answer(query, plan, retrieval, iteration=iteration)
     
     elapsed = time.time() - start_time
     print(f"[Synthesizer] Generated answer ({len(answer)} chars)")

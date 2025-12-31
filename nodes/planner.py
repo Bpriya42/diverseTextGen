@@ -31,7 +31,7 @@ def planner_node(state: RAGState) -> RAGState:
     
     if iteration == 0:
         # Initial planning
-        plan = generate_initial_plan(query)
+        plan = generate_initial_plan(query, iteration=iteration)
         print(f"[Planner] Generated initial plan with {len(plan)} aspects")
     else:
         # Refinement based on feedback
@@ -43,7 +43,8 @@ def planner_node(state: RAGState) -> RAGState:
             query=query,
             current_plan=current_plan,
             factual_feedback=factual_feedback,
-            coverage_feedback=coverage_feedback
+            coverage_feedback=coverage_feedback,
+            iteration=iteration
         )
         print(f"[Planner] Refined plan to {len(plan)} aspects")
     

@@ -17,6 +17,7 @@ from config.settings import (
 from llm.server_llm import ServerLLM, load_url_from_log_file
 from llm.prompts.planner_prompts import format_planner_refinement_prompt
 from data.formatters import get_query_planning_formatter
+from llm_observability import get_observability
 
 
 # Module-level LLM instance (singleton pattern)
@@ -111,12 +112,13 @@ def clean_plan_text(text: str) -> List[Dict]:
         return []
 
 
-def generate_initial_plan(query: str) -> List[Dict]:
+def generate_initial_plan(query: str, iteration: int = 0) -> List[Dict]:
     """
     Generate initial query decomposition plan.
     
     Args:
         query: User query string
+        iteration: Current iteration number (for logging)
         
     Returns:
         List of aspect dictionaries with keys: aspect, query, reason
@@ -133,6 +135,18 @@ def generate_initial_plan(query: str) -> List[Dict]:
     raw_plan = responses[0].outputs[0].text
     plan = clean_plan_text(raw_plan)
     
+    # Log decision
+    obs = get_observability()
+    obs.log_decision(
+        iteration=iteration,
+        agent="planner",
+        decision_type="initial_plan",
+        metrics={
+            "num_aspects": len(plan),
+            "aspects": [p.get("aspect", "") for p in plan]
+        }
+    )
+    
     return plan
 
 
@@ -140,7 +154,8 @@ def refine_plan_with_feedback(
     query: str,
     current_plan: List[Dict],
     factual_feedback: Dict,
-    coverage_feedback: Dict
+    coverage_feedback: Dict,
+    iteration: int = 1
 ) -> List[Dict]:
     """
     Refine plan based on factual and coverage feedback.
@@ -150,6 +165,7 @@ def refine_plan_with_feedback(
         current_plan: Current plan to refine
         factual_feedback: Feedback from Agent 5 (verifier)
         coverage_feedback: Feedback from Agent 6 (coverage evaluator)
+        iteration: Current iteration number (for logging)
         
     Returns:
         Refined plan with added/modified aspects
@@ -263,6 +279,28 @@ Example of valid JSON:
                     aspect["query"] += f" (Focus on: {detail['needed_evidence'][:40]})"
                     aspect["reason"] += f"; Enhanced for better evidence gathering"
                     break
+    
+    # Log decision
+    obs = get_observability()
+    current_aspect_names = set(p.get("aspect", "") for p in current_plan)
+    refined_aspect_names = set(p.get("aspect", "") for p in refined_plan)
+    aspects_added = list(refined_aspect_names - current_aspect_names)
+    aspects_removed = list(current_aspect_names - refined_aspect_names)
+    
+    obs.log_decision(
+        iteration=iteration,
+        agent="planner",
+        decision_type="refine_plan",
+        metrics={
+            "aspects_before": len(current_plan),
+            "aspects_after": len(refined_plan),
+            "refuted_facts": len(refuted_facts_details),
+            "unclear_facts": len(unclear_facts_details),
+            "missing_points": len(missing_salient),
+            "aspects_added": aspects_added[:3],  # Limit to 3 for readability
+            "aspects_removed": aspects_removed[:3]
+        }
+    )
     
     return refined_plan
 

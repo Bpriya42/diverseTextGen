@@ -16,6 +16,7 @@ from config.settings import (
 )
 from llm.server_llm import ServerLLM, load_url_from_log_file
 from llm.prompts.synthesizer_prompts import format_synthesizer_prompt
+from llm_observability import get_observability
 
 
 # Module-level LLM instance
@@ -45,7 +46,7 @@ def get_llm():
 
 
 
-def generate_answer(query: str, plan: List[Dict], retrieval: List[Dict]) -> str:
+def generate_answer(query: str, plan: List[Dict], retrieval: List[Dict], iteration: int = 0) -> str:
     """
     Generate comprehensive answer from query, plan, and retrieved documents.
     
@@ -53,6 +54,7 @@ def generate_answer(query: str, plan: List[Dict], retrieval: List[Dict]) -> str:
         query: Original user query
         plan: Query decomposition plan
         retrieval: Retrieved documents per aspect
+        iteration: Current iteration number (for logging)
         
     Returns:
         Generated answer string
@@ -69,6 +71,21 @@ def generate_answer(query: str, plan: List[Dict], retrieval: List[Dict]) -> str:
     )[0]
     
     answer_text = response.outputs[0].text.strip()
+    
+    # Log decision
+    obs = get_observability()
+    num_docs = sum(len(r.get("documents", [])) for r in retrieval)
+    obs.log_decision(
+        iteration=iteration,
+        agent="synthesizer",
+        decision_type="generate_answer",
+        metrics={
+            "answer_length": len(answer_text),
+            "answer_word_count": len(answer_text.split()),
+            "num_aspects_used": len(plan),
+            "num_documents_used": num_docs
+        }
+    )
     
     return answer_text
 
